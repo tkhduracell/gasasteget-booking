@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PendingRequestsList } from "./pending-requests-list";
 import type { AccessRequest } from "@/lib/auth/types";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Admin - Gasasteget",
 };

@@ -1,5 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/permissions";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Dashboard - Gasasteget",
 };
