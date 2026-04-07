@@ -35,17 +35,31 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
   PRIMARY KEY (user_id, role_id)
 );
 
+-- Table: access_requests (users request access with their info)
+CREATE TABLE IF NOT EXISTS public.access_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  community_role TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
+  reviewed_by UUID REFERENCES auth.users(id),
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON public.user_roles(user_id);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON public.role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_access_requests_user_id ON public.access_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_access_requests_status ON public.access_requests(status);
 
 -- ============================================================
 -- Seed: Roles
 -- ============================================================
 INSERT INTO public.roles (name, description) VALUES
   ('admin', 'Full system access'),
-  ('manager', 'Manage bookings and users'),
-  ('user', 'Standard booking user')
+  ('booker', 'Can create and manage bookings')
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================
@@ -58,7 +72,7 @@ INSERT INTO public.permissions (action, description) VALUES
   ('bookings.delete', 'Cancel bookings'),
   ('users.read', 'View user list'),
   ('users.manage', 'Manage user accounts'),
-  ('roles.assign', 'Assign roles to users')
+  ('requests.manage', 'Approve or deny access requests')
 ON CONFLICT (action) DO NOTHING;
 
 -- ============================================================
@@ -72,20 +86,12 @@ INSERT INTO public.role_permissions (role_id, permission_id)
   WHERE r.name = 'admin'
 ON CONFLICT DO NOTHING;
 
--- Manager gets booking CRUD + user read
+-- Booker gets booking CRUD
 INSERT INTO public.role_permissions (role_id, permission_id)
   SELECT r.id, p.id
   FROM public.roles r, public.permissions p
-  WHERE r.name = 'manager'
-    AND p.action IN ('bookings.create', 'bookings.read', 'bookings.update', 'bookings.delete', 'users.read')
-ON CONFLICT DO NOTHING;
-
--- User gets basic booking access
-INSERT INTO public.role_permissions (role_id, permission_id)
-  SELECT r.id, p.id
-  FROM public.roles r, public.permissions p
-  WHERE r.name = 'user'
-    AND p.action IN ('bookings.create', 'bookings.read')
+  WHERE r.name = 'booker'
+    AND p.action IN ('bookings.create', 'bookings.read', 'bookings.update', 'bookings.delete')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -95,6 +101,7 @@ ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.access_requests ENABLE ROW LEVEL SECURITY;
 
 -- Authenticated users can read roles, permissions, and role_permissions
 CREATE POLICY "Authenticated users can read roles"
@@ -131,6 +138,33 @@ CREATE POLICY "Admins can manage user_roles"
 
 CREATE POLICY "Admins can delete user_roles"
   ON public.user_roles FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.user_roles ur
+      JOIN public.roles r ON ur.role_id = r.id
+      WHERE ur.user_id = auth.uid() AND r.name = 'admin'
+    )
+  );
+
+-- Access requests: users can insert their own and read their own
+CREATE POLICY "Users can create own access requests"
+  ON public.access_requests FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can read own access requests"
+  ON public.access_requests FOR SELECT TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.user_roles ur
+      JOIN public.roles r ON ur.role_id = r.id
+      WHERE ur.user_id = auth.uid() AND r.name = 'admin'
+    )
+  );
+
+-- Only admins can update access requests (approve/deny)
+CREATE POLICY "Admins can update access requests"
+  ON public.access_requests FOR UPDATE TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.user_roles ur

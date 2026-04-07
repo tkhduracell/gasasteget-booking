@@ -22,19 +22,11 @@ export default async function DashboardPage() {
             <dd className="text-sm text-gray-900">{user?.email}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Roller</dt>
+            <dt className="text-sm font-medium text-gray-500">Roll</dt>
             <dd className="text-sm text-gray-900">
               {user?.roles.length
                 ? user.roles.join(", ")
-                : "Inga roller tilldelade"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500">Behörigheter</dt>
-            <dd className="text-sm text-gray-900">
-              {user?.permissions.length
-                ? user.permissions.join(", ")
-                : "Inga behörigheter"}
+                : "Ingen roll tilldelad"}
             </dd>
           </div>
         </dl>

@@ -9,7 +9,7 @@ export const PERMISSIONS = {
   BOOKINGS_DELETE: "bookings.delete",
   USERS_READ: "users.read",
   USERS_MANAGE: "users.manage",
-  ROLES_ASSIGN: "roles.assign",
+  REQUESTS_MANAGE: "requests.manage",
 } as const;
 
 export type PermissionAction = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -32,9 +32,10 @@ export async function getCurrentUser(): Promise<UserWithPermissions | null> {
     p_user_id: user.id,
   });
 
-  const roles = (userRoles as { role_name: string }[] | null)?.map(
-    (r) => r.role_name
-  ) ?? [];
+  const roles =
+    (userRoles as { role_name: string }[] | null)?.map(
+      (r) => r.role_name
+    ) ?? [];
 
   // Fetch permissions based on roles
   const { data: rolePermissions } = await supabase

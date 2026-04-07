@@ -25,3 +25,15 @@ export interface UserWithPermissions {
   roles: string[];
   permissions: string[];
 }
+
+export interface AccessRequest {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  community_role: string;
+  status: "pending" | "approved" | "denied";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
