@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   const supabase = createClient();
 
-  async function handleMagicLink(e: React.FormEvent) {
+  async function handleMagicLink(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
     setError(null);
