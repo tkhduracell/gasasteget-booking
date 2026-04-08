@@ -12,7 +12,7 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-12">
         <div className="grid gap-6 sm:grid-cols-2">
           <a
-            href="#"
+            href="/schedule"
             className="flex flex-col items-center gap-3 rounded-2xl bg-white p-10 shadow-md transition-shadow hover:shadow-lg"
           >
             <span className="text-4xl">📅</span>
