@@ -1,17 +1,17 @@
-import { TopBar } from "@/components/top-bar";
-import { Navbar } from "@/components/navbar";
-import { Hero } from "@/components/hero";
 import { CourseCards } from "@/components/course-cards";
-import { Footer } from "@/components/footer";
 
 export default function Home() {
   return (
-    <main>
-      <TopBar />
-      <Navbar />
-      <Hero />
+    <main className="flex min-h-screen flex-col bg-gray-warm">
+      <header className="bg-purple-main py-8 text-white">
+        <div className="mx-auto max-w-4xl px-4 text-center">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            Gasasteget
+          </h1>
+          <p className="mt-2 text-white/80">Boka din nästa danskurs</p>
+        </div>
+      </header>
       <CourseCards />
-      <Footer />
     </main>
   );
 }
