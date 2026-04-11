@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarDay } from "./CalendarDay";
-import { getMockBlocks } from "./mock-data";
+import { fetchDansEvents } from "./dans-api";
 import type { CalendarBlock } from "./types";
 
 const DAY_NAMES = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
@@ -57,8 +57,15 @@ export function MonthCalendar() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
 
+  const [allBlocks, setAllBlocks] = useState<CalendarBlock[]>([]);
+
+  useEffect(() => {
+    fetchDansEvents().then(setAllBlocks);
+  }, []);
+
   const cells = getCalendarGrid(year, month);
-  const blocks = getMockBlocks(year, month);
+  const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const blocks = allBlocks.filter((b) => b.startAt.startsWith(monthStr));
   const byDay = blocksByDay(blocks);
 
   const today = now.getFullYear() === year && now.getMonth() === month ? now.getDate() : -1;
