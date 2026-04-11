@@ -3,32 +3,20 @@
 import { useState } from "react";
 import { requestAccess } from "@/app/(protected)/actions";
 
+const ROLE_OPTIONS = ["Funktionär", "Tävlingsdansare", "Annat"] as const;
+type RoleChoice = (typeof ROLE_OPTIONS)[number] | "";
+
 export function AccessRequestForm({ userEmail }: { userEmail: string }) {
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [roleChoice, setRoleChoice] = useState<RoleChoice>("");
 
   async function handleSubmit(formData: FormData) {
     setError(null);
     const result = await requestAccess(formData);
-    if (result.error) {
+    // On success the server action redirects; we only reach here on error.
+    if (result?.error) {
       setError(result.error);
-    } else {
-      setSubmitted(true);
     }
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6">
-        <h2 className="text-lg font-semibold text-green-800">
-          Förfrågan skickad!
-        </h2>
-        <p className="mt-2 text-sm text-green-700">
-          Din begäran om åtkomst har skickats. En administratör kommer att
-          granska den.
-        </p>
-      </div>
-    );
   }
 
   return (
@@ -50,14 +38,14 @@ export function AccessRequestForm({ userEmail }: { userEmail: string }) {
             htmlFor="name"
             className="block text-sm font-medium text-gray-700"
           >
-            Namn
+            Fullständigt namn
           </label>
           <input
             id="name"
             name="name"
             type="text"
             required
-            placeholder="Ditt namn"
+            placeholder="Ditt fullständiga namn"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
@@ -74,8 +62,10 @@ export function AccessRequestForm({ userEmail }: { userEmail: string }) {
             name="email"
             type="email"
             required
+            readOnly
+            aria-readonly="true"
             defaultValue={userEmail}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-600 shadow-sm"
           />
         </div>
 
@@ -86,15 +76,43 @@ export function AccessRequestForm({ userEmail }: { userEmail: string }) {
           >
             Roll i föreningen
           </label>
-          <input
+          <select
             id="communityRole"
             name="communityRole"
-            type="text"
             required
-            placeholder="T.ex. styrelsemedlem, tränare, förälder..."
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+            value={roleChoice}
+            onChange={(e) => setRoleChoice(e.target.value as RoleChoice)}
+            className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="" disabled>
+              Välj en roll...
+            </option>
+            {ROLE_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {roleChoice === "Annat" && (
+          <div>
+            <label
+              htmlFor="communityRoleOther"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Beskriv din roll
+            </label>
+            <input
+              id="communityRoleOther"
+              name="communityRoleOther"
+              type="text"
+              required
+              placeholder="Skriv din roll här..."
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        )}
 
         <button
           type="submit"

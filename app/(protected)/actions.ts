@@ -1,10 +1,15 @@
 "use server";
 
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+
+const ALLOWED_ROLES = ["Funktionär", "Tävlingsdansare", "Annat"] as const;
+type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
 export async function requestAccess(
   formData: FormData
-): Promise<{ error?: string; message?: string }> {
+): Promise<{ error?: string }> {
   const supabase = await createClient();
 
   const {
@@ -15,13 +20,34 @@ export async function requestAccess(
     return { error: "Du måste vara inloggad." };
   }
 
-  const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
-  const communityRole = formData.get("communityRole") as string;
+  const name = (formData.get("name") as string | null)?.trim() ?? "";
+  const roleRaw =
+    (formData.get("communityRole") as string | null)?.trim() ?? "";
+  const roleOther =
+    (formData.get("communityRoleOther") as string | null)?.trim() ?? "";
 
-  if (!name || !email || !communityRole) {
-    return { error: "Alla fält krävs." };
+  if (!name) {
+    return { error: "Namn krävs." };
   }
+
+  if (!ALLOWED_ROLES.includes(roleRaw as AllowedRole)) {
+    return { error: "Välj en giltig roll." };
+  }
+  const roleChoice = roleRaw as AllowedRole;
+
+  let communityRole: string;
+  if (roleChoice === "Annat") {
+    if (!roleOther) {
+      return { error: "Vänligen beskriv din roll." };
+    }
+    communityRole = roleOther;
+  } else {
+    communityRole = roleChoice;
+  }
+
+  // Trust the server-side session email rather than whatever came over the
+  // wire — the client field is only `readOnly`, not actually locked.
+  const safeEmail = user.email ?? "";
 
   // Check for existing pending request
   const { data: existing } = await supabase
@@ -29,23 +55,23 @@ export async function requestAccess(
     .select("id")
     .eq("user_id", user.id)
     .eq("status", "pending")
-    .limit(1)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     return { error: "Du har redan en väntande förfrågan." };
   }
 
-  const { error } = await supabase.from("access_requests").insert({
+  const { error: insertError } = await supabase.from("access_requests").insert({
     user_id: user.id,
     name,
-    email,
+    email: safeEmail,
     community_role: communityRole,
   });
 
-  if (error) {
-    return { error: error.message };
+  if (insertError) {
+    return { error: insertError.message };
   }
 
-  return { message: "Förfrågan skickad." };
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
 }
